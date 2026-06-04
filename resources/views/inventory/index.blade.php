@@ -10,7 +10,7 @@
             <i class="bi bi-plus-lg"></i> Add Item
         </a>
     </div>
-    <div class="card-body p-0">
+    <div class="card-body p-0"><div class="table-responsive">
         <table class="table table-hover mb-0">
             <thead>
                 <tr>
@@ -60,8 +60,7 @@
                 </tr>
                 @endforelse
             </tbody>
-        </table>
-    </div>
+        </table></div></div>
     @if($inventory->hasPages())
     <div class="card-footer">
         {{ $inventory->links() }}

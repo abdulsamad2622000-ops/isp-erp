@@ -11,7 +11,7 @@
             <i class="bi bi-plus-lg"></i> Record Payment
         </a>
     </div>
-    <div class="card-body p-0">
+    <div class="card-body p-0"><div class="table-responsive">
         <table class="table table-hover mb-0">
             <thead>
                 <tr>
@@ -56,8 +56,7 @@
                 </tr>
                 @endforelse
             </tbody>
-        </table>
-    </div>
+        </table></div></div>
     @if($payments->hasPages())
     <div class="card-footer">
         {{ $payments->links() }}

@@ -10,7 +10,7 @@
             <i class="bi bi-plus-lg"></i> Add Customer
         </a>
     </div>
-    <div class="card-body p-0">
+    <div class="card-body p-0"><div class="table-responsive">
         <table class="table table-hover mb-0">
             <thead>
                 <tr>
@@ -57,8 +57,7 @@
                 </tr>
                 @endforelse
             </tbody>
-        </table>
-    </div>
+        </table></div></div>
     @if($customers->hasPages())
     <div class="card-footer">
         {{ $customers->links() }}
