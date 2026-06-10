@@ -47,21 +47,25 @@
 <div class="card mb-3">
     <div class="card-body py-2">
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="fw-semibold text-muted small me-1"><i class="bi bi-clock-history me-1"></i>Expiry Filter:</span>
+            <span class="fw-semibold text-muted small me-1"><i class="bi bi-hourglass-split me-1"></i>Expiry Filter:</span>
+            <a href="{{ route('customers.index', ['expiry_days' => 1]) }}"
+                class="btn btn-sm {{ $expiryDays == 1 ? 'btn-danger' : 'btn-outline-danger' }}">
+                <i class="bi bi-hourglass-split me-1"></i>Expiring (1 Day)
+            </a>
             <a href="{{ route('customers.index', ['expiry_days' => 3]) }}"
-                class="btn btn-sm {{ $expiryDays == 3 ? 'btn-danger' : 'btn-outline-danger' }}">3 Days</a>
-            <a href="{{ route('customers.index', ['expiry_days' => 4]) }}"
-                class="btn btn-sm {{ $expiryDays == 4 ? 'btn-warning' : 'btn-outline-warning' }}">4 Days</a>
-            <a href="{{ route('customers.index', ['expiry_days' => 5]) }}"
-                class="btn btn-sm {{ $expiryDays == 5 ? 'btn-info' : 'btn-outline-info' }}">5 Days</a>
-            <form method="GET" action="{{ route('customers.index') }}" class="d-flex gap-2 align-items-center ms-2">
-                <input type="number" name="expiry_days" class="form-control form-control-sm"
-                    style="width:90px;" placeholder="Custom" min="1" max="365"
-                    value="{{ !in_array($expiryDays, [3,4,5]) && $expiryDays ? $expiryDays : '' }}">
-                <button type="submit" class="btn btn-sm btn-secondary">Go</button>
-            </form>
+                class="btn btn-sm {{ $expiryDays == 3 ? 'btn-warning' : 'btn-outline-warning' }}">
+                <i class="bi bi-hourglass-split me-1"></i>Expiring (3 Days)
+            </a>
+            <a href="{{ route('customers.index', ['expiry_days' => 7]) }}"
+                class="btn btn-sm {{ $expiryDays == 7 ? 'btn-info' : 'btn-outline-info' }}">
+                <i class="bi bi-hourglass-split me-1"></i>Expiring (1 Week)
+            </a>
+            <a href="{{ route('customers.index', ['expiry_days' => 14]) }}"
+                class="btn btn-sm {{ $expiryDays == 14 ? 'btn-secondary' : 'btn-outline-secondary' }}">
+                <i class="bi bi-hourglass-split me-1"></i>Expiring (2 Weeks)
+            </a>
             @if($expiryDays)
-            <a href="{{ route('customers.index') }}" class="btn btn-sm btn-outline-secondary ms-1">
+            <a href="{{ route('customers.index') }}" class="btn btn-sm btn-outline-dark ms-1">
                 <i class="bi bi-x-lg"></i> Clear
             </a>
             <span class="badge bg-dark ms-1">Expiring within {{ $expiryDays }} day(s)</span>

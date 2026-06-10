@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\Area;
+use App\Models\Package;
+use App\Models\Connection;
 use App\Exports\CustomersExport;
 use App\Imports\CustomersImport;
 use Carbon\Carbon;
@@ -15,7 +17,6 @@ class CustomerController extends Controller
     {
         $query = Customer::with('area')->latest();
 
-        // Expiry filter
         if ($request->filled('expiry_days')) {
             $days = (int) $request->expiry_days;
             $targetDate = now()->addDays($days)->toDateString();
@@ -34,22 +35,31 @@ class CustomerController extends Controller
 
     public function create()
     {
-        $areas = Area::where('is_active', true)->get();
-        return view('customers.create', compact('areas'));
+        $areas    = Area::where('is_active', true)->get();
+        $packages = Package::where('is_active', true)->get();
+        return view('customers.create', compact('areas', 'packages'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'name'      => 'required|string|max:255',
-            'phone'     => 'required|string|max:20',
-            'address'   => 'nullable|string',
-            'area_id'   => 'required|exists:areas,id',
-            'due_date'  => 'required|date',
-            'cnic'      => 'nullable|string|max:15|unique:customers,cnic',
-            'email'     => 'nullable|email',
-            'status'    => 'required|in:active,suspended,terminated',
-            'user_id'   => 'required|string|max:255|unique:customers,user_id',
+            'name'        => 'required|string|max:255',
+            'phone'       => 'required|string|max:20',
+            'address'     => 'nullable|string',
+            'area_id'     => 'required|exists:areas,id',
+            'due_date'    => 'required|date',
+            'cnic'        => 'nullable|string|max:15|unique:customers,cnic',
+            'email'       => 'nullable|email',
+            'status'      => 'required|in:active,suspended,terminated',
+            'user_id'     => 'required|string|max:255|unique:customers,user_id',
+            // Connection validation (optional)
+            'package_id'       => 'nullable|exists:packages,id',
+            'ip_address'       => 'nullable|string|max:50',
+            'mac_address'      => 'nullable|string|max:50',
+            'conn_username'    => 'nullable|string|max:100',
+            'conn_password'    => 'nullable|string|max:100',
+            'connection_type'  => 'nullable|in:fiber,wireless,dsl',
+            'installation_date'=> 'nullable|date',
         ]);
 
         $dueDate    = Carbon::parse($request->due_date);
@@ -57,7 +67,7 @@ class CustomerController extends Controller
                         ? $request->expiry_date
                         : $dueDate->copy()->addMonth()->toDateString();
 
-        Customer::create([
+        $customer = Customer::create([
             'user_id'     => $request->user_id,
             'name'        => $request->name,
             'cnic'        => $request->cnic,
@@ -71,6 +81,22 @@ class CustomerController extends Controller
             'expiry_date' => $expiryDate,
         ]);
 
+        // Agar connection details fill ki hain toh connection bhi banao
+        if ($request->filled('package_id')) {
+            Connection::create([
+                'customer_id'       => $customer->id,
+                'package_id'        => $request->package_id,
+                'area_id'           => $request->area_id,
+                'ip_address'        => $request->ip_address,
+                'mac_address'       => $request->mac_address,
+                'username'          => $request->conn_username,
+                'password'          => $request->conn_password,
+                'connection_type'   => $request->connection_type ?? 'fiber',
+                'status'            => $request->status == 'active' ? 'active' : 'suspended',
+                'installation_date' => $request->installation_date ?? now()->toDateString(),
+            ]);
+        }
+
         return redirect()->route('customers.index')->with('success', 'Customer added successfully!');
     }
 
@@ -82,8 +108,9 @@ class CustomerController extends Controller
 
     public function edit(Customer $customer)
     {
-        $areas = Area::where('is_active', true)->get();
-        return view('customers.edit', compact('customer', 'areas'));
+        $areas    = Area::where('is_active', true)->get();
+        $packages = Package::where('is_active', true)->get();
+        return view('customers.edit', compact('customer', 'areas', 'packages'));
     }
 
     public function update(Request $request, Customer $customer)

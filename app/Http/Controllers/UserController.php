@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Hash;
 class UserController extends Controller
 {
     protected $modules = [
-        'customers', 'connections', 'areas', 'packages',
+        'customers', 'areas', 'packages',
         'invoices', 'payments', 'complaints', 'suspensions',
         'inventory', 'expenses', 'reports', 'notifications'
     ];
@@ -30,19 +30,17 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
+            'name'     => 'required|string|max:255|unique:users,name',
             'password' => 'required|min:6',
         ]);
 
         $user = User::create([
             'name'     => $request->name,
-            'email'    => $request->email,
+            'email'    => $request->name . '@isp.local',
             'password' => Hash::make($request->password),
             'role'     => 'user',
         ]);
 
-        // Save permissions
         foreach ($this->modules as $module) {
             Permission::create([
                 'user_id'    => $user->id,
@@ -67,17 +65,15 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $request->validate([
-            'name'  => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'name' => 'required|string|max:255|unique:users,name,' . $user->id,
         ]);
 
-        $data = $request->only('name', 'email');
+        $data = ['name' => $request->name];
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
         }
         $user->update($data);
 
-        // Update permissions
         foreach ($this->modules as $module) {
             Permission::updateOrCreate(
                 ['user_id' => $user->id, 'module' => $module],

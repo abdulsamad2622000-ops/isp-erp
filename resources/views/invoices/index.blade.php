@@ -72,6 +72,17 @@
 @endif
 @endforeach
 
+{{-- Hidden Mark Credit Forms --}}
+@foreach($invoices as $invoice)
+@if($invoice->status != 'paid' && $invoice->status != 'credit')
+<form id="markCreditForm{{ $invoice->id }}"
+    action="{{ route('invoices.markCredit', $invoice) }}"
+    method="POST" style="display:none;">
+    @csrf
+</form>
+@endif
+@endforeach
+
 {{-- Expiry Filter Bar --}}
 <div class="card mb-3">
     <div class="card-body py-2">
@@ -155,7 +166,7 @@
                         $totalPaid = $invoice->payments->sum('amount_paid');
                         $remaining = $invoice->total_amount - $totalPaid;
                     @endphp
-                    <tr>
+                    <tr class="{{ $invoice->status == 'credit' ? 'table-info' : '' }}">
                         <td class="ps-3">
                             @if($invoice->status != 'paid')
                             <input type="checkbox" name="invoice_ids[]" value="{{ $invoice->id }}"
@@ -184,6 +195,8 @@
                                 <span class="badge bg-warning text-dark">Partial</span>
                             @elseif($invoice->status == 'unpaid')
                                 <span class="badge bg-danger">Unpaid</span>
+                            @elseif($invoice->status == 'credit')
+                                <span class="badge" style="background:#6f42c1;">Credit</span>
                             @else
                                 <span class="badge bg-secondary">{{ ucfirst($invoice->status) }}</span>
                             @endif
@@ -207,6 +220,14 @@
                                         {{ $remaining }}
                                     )">
                                     <i class="bi bi-cash"></i>
+                                </button>
+                                @endif
+                                {{-- Credit Button --}}
+                                @if($invoice->status != 'paid' && $invoice->status != 'credit')
+                                <button type="button" class="btn btn-sm text-white" title="Activate on Credit"
+                                    style="background:#6f42c1;"
+                                    onclick="if(confirm('Activate customer on credit? Payment will be pending.')) { document.getElementById('markCreditForm{{ $invoice->id }}').submit(); }">
+                                    <i class="bi bi-person-check"></i>
                                 </button>
                                 @endif
                                 <a href="{{ route('invoices.show', $invoice) }}" class="btn btn-sm btn-info text-white">

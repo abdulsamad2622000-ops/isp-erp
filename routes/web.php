@@ -1,5 +1,4 @@
 <?php
-
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
@@ -15,6 +14,7 @@ use App\Http\Controllers\SuspensionController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ProfileController;
 
 // Auth Routes
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -23,17 +23,19 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
-
     Route::get('/', function () {
         return redirect()->route('dashboard');
     });
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // Profile
+    Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
+
     Route::resource('users', UserController::class);
     Route::resource('areas', AreaController::class);
     Route::resource('packages', PackageController::class);
-
     Route::resource('customers', CustomerController::class);
     Route::get('customers-export', [CustomerController::class, 'export'])->name('customers.export');
     Route::post('customers-import', [CustomerController::class, 'import'])->name('customers.import');
@@ -44,6 +46,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('invoices', InvoiceController::class);
     Route::post('invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])->name('invoices.markPaid');
     Route::post('invoices/{invoice}/partial-payment', [InvoiceController::class, 'partialPayment'])->name('invoices.partialPayment');
+    Route::post('invoices/{invoice}/mark-credit', [InvoiceController::class, 'markCredit'])->name('invoices.markCredit');
 
     Route::resource('payments', PaymentController::class);
     Route::resource('complaints', ComplaintController::class);

@@ -10,7 +10,10 @@
     <div class="card-body">
         <form action="{{ route('customers.store') }}" method="POST">
             @csrf
-            <div class="row g-3">
+
+            {{-- ===== CUSTOMER INFO ===== --}}
+            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-person me-2"></i>Customer Information</h6>
+            <div class="row g-3 mb-4">
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">User ID <span class="text-danger">*</span></label>
                     <input type="text" name="user_id" class="form-control @error('user_id') is-invalid @enderror"
@@ -66,35 +69,90 @@
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Expiry Date</label>
                     <input type="date" name="expiry_date" id="expiry_date"
-                        class="form-control"
-                        value="{{ old('expiry_date') }}">
+                        class="form-control" value="{{ old('expiry_date') }}">
                     <div class="form-text">Auto set to 1 month after due date</div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
                     <select name="status" class="form-select @error('status') is-invalid @enderror">
-                        <option value="active" {{ old('status') == 'active' ? 'selected' : '' }}>Active</option>
-                        <option value="suspended" {{ old('status') == 'suspended' ? 'selected' : '' }}>Suspended</option>
+                        <option value="active"     {{ old('status','active') == 'active'     ? 'selected' : '' }}>Active</option>
+                        <option value="suspended"  {{ old('status') == 'suspended'  ? 'selected' : '' }}>Suspended</option>
                         <option value="terminated" {{ old('status') == 'terminated' ? 'selected' : '' }}>Terminated</option>
                     </select>
                     @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-lg"></i> Save Customer
-                    </button>
-                    <a href="{{ route('customers.index') }}" class="btn btn-secondary ms-2">
-                        <i class="bi bi-x-lg"></i> Cancel
-                    </a>
+            </div>
+
+            {{-- ===== CONNECTION DETAILS ===== --}}
+            <div class="border rounded p-3 mb-4" style="background:#f8f9ff;">
+                <h6 class="fw-bold text-success mb-3">
+                    <i class="bi bi-plug me-2"></i>Connection Details
+                    <small class="text-muted fw-normal ms-2">(Optional — fill karo agar abhi connection lagana hai)</small>
+                </h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Package</label>
+                        <select name="package_id" class="form-select @error('package_id') is-invalid @enderror">
+                            <option value="">-- Select Package --</option>
+                            @foreach($packages as $pkg)
+                            <option value="{{ $pkg->id }}" {{ old('package_id') == $pkg->id ? 'selected' : '' }}>
+                                {{ $pkg->name }} — Rs. {{ number_format($pkg->price) }}
+                            </option>
+                            @endforeach
+                        </select>
+                        @error('package_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Connection Type</label>
+                        <select name="connection_type" class="form-select">
+                            <option value="fiber"    {{ old('connection_type','fiber') == 'fiber'    ? 'selected' : '' }}>Fiber</option>
+                            <option value="wireless" {{ old('connection_type') == 'wireless' ? 'selected' : '' }}>Wireless</option>
+                            <option value="dsl"      {{ old('connection_type') == 'dsl'      ? 'selected' : '' }}>DSL</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">IP Address</label>
+                        <input type="text" name="ip_address" class="form-control"
+                            value="{{ old('ip_address') }}" placeholder="e.g. 192.168.1.100">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">MAC Address</label>
+                        <input type="text" name="mac_address" class="form-control"
+                            value="{{ old('mac_address') }}" placeholder="e.g. AA:BB:CC:DD:EE:FF">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Username</label>
+                        <input type="text" name="conn_username" class="form-control"
+                            value="{{ old('conn_username') }}" placeholder="PPPoE username">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Password</label>
+                        <input type="text" name="conn_password" class="form-control"
+                            value="{{ old('conn_password') }}" placeholder="PPPoE password">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Installation Date</label>
+                        <input type="date" name="installation_date" class="form-control"
+                            value="{{ old('installation_date', date('Y-m-d')) }}">
+                    </div>
                 </div>
             </div>
+
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Save Customer
+                </button>
+                <a href="{{ route('customers.index') }}" class="btn btn-secondary ms-2">
+                    <i class="bi bi-x-lg"></i> Cancel
+                </a>
+            </div>
+
         </form>
     </div>
 </div>
 
 <script>
 const areas = @json($areas->map(fn($a) => ['id' => $a->id, 'name' => $a->area_name]));
-
 const input = document.getElementById('area_input');
 const hiddenInput = document.getElementById('area_id');
 const suggestions = document.getElementById('area_suggestions');
@@ -103,19 +161,9 @@ input.addEventListener('input', function () {
     const query = this.value.toLowerCase().trim();
     suggestions.innerHTML = '';
     hiddenInput.value = '';
-
-    if (query.length === 0) {
-        suggestions.style.display = 'none';
-        return;
-    }
-
+    if (query.length === 0) { suggestions.style.display = 'none'; return; }
     const filtered = areas.filter(a => a.name.toLowerCase().includes(query));
-
-    if (filtered.length === 0) {
-        suggestions.style.display = 'none';
-        return;
-    }
-
+    if (filtered.length === 0) { suggestions.style.display = 'none'; return; }
     filtered.forEach(area => {
         const li = document.createElement('li');
         li.className = 'list-group-item list-group-item-action';
@@ -128,17 +176,13 @@ input.addEventListener('input', function () {
         });
         suggestions.appendChild(li);
     });
-
     suggestions.style.display = 'block';
 });
 
 document.addEventListener('click', function (e) {
-    if (!input.contains(e.target)) {
-        suggestions.style.display = 'none';
-    }
+    if (!input.contains(e.target)) suggestions.style.display = 'none';
 });
 
-// Auto set expiry date = due date + 1 month
 document.getElementById('due_date').addEventListener('change', function() {
     const due = new Date(this.value);
     if (!isNaN(due)) {
@@ -147,7 +191,6 @@ document.getElementById('due_date').addEventListener('change', function() {
     }
 });
 
-// Set on page load
 window.addEventListener('load', function() {
     const dueInput = document.getElementById('due_date');
     if (dueInput.value && !document.getElementById('expiry_date').value) {

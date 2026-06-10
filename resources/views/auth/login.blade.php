@@ -1,4 +1,3 @@
- 
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -128,13 +127,15 @@
         <form action="{{ route('login.post') }}" method="POST">
             @csrf
             <div class="mb-3">
-                <label class="form-label fw-semibold" style="font-size:14px;">Email Address</label>
+                <label class="form-label fw-semibold" style="font-size:14px;">Username</label>
                 <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                    <input type="email" name="email" class="form-control @error('email') is-invalid @enderror"
-                        value="{{ old('email', 'admin@isp.com') }}" placeholder="Enter email">
+                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                    <input type="text" name="username"
+                        class="form-control @error('username') is-invalid @enderror"
+                        value="{{ old('username', 'Admin') }}"
+                        placeholder="Enter username">
                 </div>
-                @error('email')
+                @error('username')
                     <div class="text-danger mt-1" style="font-size:12px;">{{ $message }}</div>
                 @enderror
             </div>
@@ -143,7 +144,8 @@
                 <label class="form-label fw-semibold" style="font-size:14px;">Password</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                    <input type="password" name="password" class="form-control @error('password') is-invalid @enderror"
+                    <input type="password" name="password"
+                        class="form-control @error('password') is-invalid @enderror"
                         placeholder="Enter password">
                 </div>
                 @error('password')
@@ -166,7 +168,7 @@
         <div class="divider">Default Credentials</div>
 
         <div class="default-creds">
-            <strong>Email:</strong> admin@isp.com &nbsp;|&nbsp; <strong>Password:</strong> admin123
+            <strong>Username:</strong> Admin &nbsp;|&nbsp; <strong>Password:</strong> admin123
         </div>
     </div>
 

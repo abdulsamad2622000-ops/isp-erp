@@ -18,11 +18,17 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email'    => 'required|email',
+            'username' => 'required|string',
             'password' => 'required|min:6',
         ]);
 
-        $credentials = $request->only('email', 'password');
+        // name ya email se login allow karo
+        $fieldType = filter_var($request->username, FILTER_VALIDATE_EMAIL) ? 'email' : 'name';
+
+        $credentials = [
+            $fieldType => $request->username,
+            'password' => $request->password,
+        ];
 
         if (Auth::attempt($credentials, $request->remember)) {
             $request->session()->regenerate();
@@ -30,8 +36,8 @@ class AuthController extends Controller
         }
 
         return back()->withErrors([
-            'email' => 'Invalid email or password.',
-        ])->withInput($request->only('email'));
+            'username' => 'Invalid username or password.',
+        ])->withInput($request->only('username'));
     }
 
     public function logout(Request $request)

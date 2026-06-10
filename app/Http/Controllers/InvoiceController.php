@@ -47,7 +47,7 @@ class InvoiceController extends Controller
             'tax'         => 'nullable|numeric|min:0',
             'issue_date'  => 'required|date',
             'due_date'    => 'required|date',
-            'status'      => 'required|in:unpaid,paid,partial,overdue',
+            'status'      => 'required|in:unpaid,paid,partial,overdue,credit',
             'notes'       => 'nullable|string',
         ]);
 
@@ -96,7 +96,7 @@ class InvoiceController extends Controller
             'tax'         => 'nullable|numeric|min:0',
             'issue_date'  => 'required|date',
             'due_date'    => 'required|date',
-            'status'      => 'required|in:unpaid,paid,partial,overdue',
+            'status'      => 'required|in:unpaid,paid,partial,overdue,credit',
             'notes'       => 'nullable|string',
         ]);
 
@@ -150,6 +150,22 @@ class InvoiceController extends Controller
         ]);
 
         return back()->with('success', 'Invoice paid! Customer renewed till ' . $newExpiryDate);
+    }
+
+    public function markCredit(Invoice $invoice)
+    {
+        $invoice->update(['status' => 'credit']);
+
+        $newDueDate    = Carbon::parse($invoice->due_date);
+        $newExpiryDate = $newDueDate->copy()->addMonth()->toDateString();
+
+        $invoice->customer->update([
+            'status'      => 'active',
+            'due_date'    => $newDueDate->toDateString(),
+            'expiry_date' => $newExpiryDate,
+        ]);
+
+        return back()->with('success', 'Customer activated on credit! Payment pending. Expiry: ' . $newExpiryDate);
     }
 
     public function partialPayment(Request $request, Invoice $invoice)
