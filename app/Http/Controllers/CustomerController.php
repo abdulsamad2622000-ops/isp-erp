@@ -6,15 +6,30 @@ use App\Models\Customer;
 use App\Models\Area;
 use App\Exports\CustomersExport;
 use App\Imports\CustomersImport;
-use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $customers = Customer::with('area')->latest()->paginate(15);
-        return view('customers.index', compact('customers'));
+        $query = Customer::with('area')->latest();
+
+        // Expiry filter
+        if ($request->filled('expiry_days')) {
+            $days = (int) $request->expiry_days;
+            $targetDate = now()->addDays($days)->toDateString();
+            $today = now()->toDateString();
+
+            $query->whereNotNull('expiry_date')
+                  ->whereDate('expiry_date', '>=', $today)
+                  ->whereDate('expiry_date', '<=', $targetDate);
+        }
+
+        $customers = $query->paginate(15)->withQueryString();
+        $expiryDays = $request->expiry_days;
+
+        return view('customers.index', compact('customers', 'expiryDays'));
     }
 
     public function create()
@@ -26,18 +41,35 @@ class CustomerController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'         => 'required|string|max:255',
-            'phone'        => 'required|string|max:20',
-            'address' => 'nullable|string',
-            'area_id'      => 'required|exists:areas,id',
-            'joining_date' => 'required|date',
-            'cnic'         => 'nullable|string|max:15|unique:customers,cnic',
-            'email'        => 'nullable|email',
-            'status'       => 'required|in:active,suspended,terminated',
-            'user_id' => 'required|string|max:255|unique:customers,user_id',
+            'name'      => 'required|string|max:255',
+            'phone'     => 'required|string|max:20',
+            'address'   => 'nullable|string',
+            'area_id'   => 'required|exists:areas,id',
+            'due_date'  => 'required|date',
+            'cnic'      => 'nullable|string|max:15|unique:customers,cnic',
+            'email'     => 'nullable|email',
+            'status'    => 'required|in:active,suspended,terminated',
+            'user_id'   => 'required|string|max:255|unique:customers,user_id',
         ]);
 
-        Customer::create($request->all());
+        $dueDate    = Carbon::parse($request->due_date);
+        $expiryDate = $request->filled('expiry_date')
+                        ? $request->expiry_date
+                        : $dueDate->copy()->addMonth()->toDateString();
+
+        Customer::create([
+            'user_id'     => $request->user_id,
+            'name'        => $request->name,
+            'cnic'        => $request->cnic,
+            'phone'       => $request->phone,
+            'whatsapp'    => $request->whatsapp,
+            'email'       => $request->email,
+            'address'     => $request->address,
+            'area_id'     => $request->area_id,
+            'status'      => $request->status,
+            'due_date'    => $request->due_date,
+            'expiry_date' => $expiryDate,
+        ]);
 
         return redirect()->route('customers.index')->with('success', 'Customer added successfully!');
     }
@@ -57,18 +89,35 @@ class CustomerController extends Controller
     public function update(Request $request, Customer $customer)
     {
         $request->validate([
-            'name'         => 'required|string|max:255',
-            'phone'        => 'required|string|max:20',
-           'address' => 'nullable|string',
-            'area_id'      => 'required|exists:areas,id',
-            'joining_date' => 'required|date',
-            'cnic'         => 'nullable|string|max:15|unique:customers,cnic,' . $customer->id,
-            'email'        => 'nullable|email',
-            'status'       => 'required|in:active,suspended,terminated',
-            'user_id' => 'required|string|max:255|unique:customers,user_id,' . $customer->id,
+            'name'      => 'required|string|max:255',
+            'phone'     => 'required|string|max:20',
+            'address'   => 'nullable|string',
+            'area_id'   => 'required|exists:areas,id',
+            'due_date'  => 'required|date',
+            'cnic'      => 'nullable|string|max:15|unique:customers,cnic,' . $customer->id,
+            'email'     => 'nullable|email',
+            'status'    => 'required|in:active,suspended,terminated',
+            'user_id'   => 'required|string|max:255|unique:customers,user_id,' . $customer->id,
         ]);
 
-        $customer->update($request->all());
+        $dueDate    = Carbon::parse($request->due_date);
+        $expiryDate = $request->filled('expiry_date')
+                        ? $request->expiry_date
+                        : $dueDate->copy()->addMonth()->toDateString();
+
+        $customer->update([
+            'user_id'     => $request->user_id,
+            'name'        => $request->name,
+            'cnic'        => $request->cnic,
+            'phone'       => $request->phone,
+            'whatsapp'    => $request->whatsapp,
+            'email'       => $request->email,
+            'address'     => $request->address,
+            'area_id'     => $request->area_id,
+            'status'      => $request->status,
+            'due_date'    => $request->due_date,
+            'expiry_date' => $expiryDate,
+        ]);
 
         return redirect()->route('customers.index')->with('success', 'Customer updated successfully!');
     }
@@ -81,7 +130,7 @@ class CustomerController extends Controller
 
     public function export()
     {
-        return Excel::download(new CustomersExport, 'customers_' . date('Y-m-d') . '.xlsx');
+        return (new CustomersExport)->download();
     }
 
     public function import(Request $request)
@@ -90,7 +139,7 @@ class CustomerController extends Controller
             'file' => 'required|mimes:xlsx,xls,csv|max:2048',
         ]);
 
-        Excel::import(new CustomersImport, $request->file('file'));
+        (new CustomersImport)->import($request->file('file'));
 
         return redirect()->route('customers.index')->with('success', 'Customers imported successfully!');
     }

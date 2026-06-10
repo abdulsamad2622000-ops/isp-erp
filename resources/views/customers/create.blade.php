@@ -52,16 +52,23 @@
                     @error('area_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-12">
-                    <label class="form-label fw-semibold">Address <span class="text-danger">*</span></label>
-                    <textarea name="address" class="form-control @error('address') is-invalid @enderror"
-                        rows="2" placeholder="Enter full address">{{ old('address') }}</textarea>
-                    @error('address')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <label class="form-label fw-semibold">Address</label>
+                    <textarea name="address" class="form-control" rows="2"
+                        placeholder="Enter full address">{{ old('address') }}</textarea>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Joining Date <span class="text-danger">*</span></label>
-                    <input type="date" name="joining_date" class="form-control @error('joining_date') is-invalid @enderror"
-                        value="{{ old('joining_date', date('Y-m-d')) }}">
-                    @error('joining_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <label class="form-label fw-semibold">Due Date <span class="text-danger">*</span></label>
+                    <input type="date" name="due_date" id="due_date"
+                        class="form-control @error('due_date') is-invalid @enderror"
+                        value="{{ old('due_date', date('Y-m-d')) }}">
+                    @error('due_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Expiry Date</label>
+                    <input type="date" name="expiry_date" id="expiry_date"
+                        class="form-control"
+                        value="{{ old('expiry_date') }}">
+                    <div class="form-text">Auto set to 1 month after due date</div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
@@ -128,6 +135,25 @@ input.addEventListener('input', function () {
 document.addEventListener('click', function (e) {
     if (!input.contains(e.target)) {
         suggestions.style.display = 'none';
+    }
+});
+
+// Auto set expiry date = due date + 1 month
+document.getElementById('due_date').addEventListener('change', function() {
+    const due = new Date(this.value);
+    if (!isNaN(due)) {
+        due.setMonth(due.getMonth() + 1);
+        document.getElementById('expiry_date').value = due.toISOString().split('T')[0];
+    }
+});
+
+// Set on page load
+window.addEventListener('load', function() {
+    const dueInput = document.getElementById('due_date');
+    if (dueInput.value && !document.getElementById('expiry_date').value) {
+        const due = new Date(dueInput.value);
+        due.setMonth(due.getMonth() + 1);
+        document.getElementById('expiry_date').value = due.toISOString().split('T')[0];
     }
 });
 </script>

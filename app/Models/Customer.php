@@ -16,7 +16,8 @@ class Customer extends Model
         'address',
         'area_id',
         'status',
-        'joining_date',
+        'due_date',
+        'expiry_date',
     ];
 
     public function area()

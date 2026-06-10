@@ -2,69 +2,56 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Connection;
+use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\Package;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class GenerateMonthlyInvoices extends Command
 {
     protected $signature = 'invoices:generate-monthly';
-    protected $description = 'Auto generate monthly invoices for active connections';
+    protected $description = 'Auto generate monthly invoices on customer due date';
 
     public function handle()
     {
         $today = Carbon::today();
 
-        $connections = Connection::with(['customer', 'package'])
+        $customers = Customer::with('connections.package')
             ->where('status', 'active')
-            ->whereNotNull('renewal_date')
+            ->whereNotNull('due_date')
+            ->whereDate('due_date', $today)
             ->get();
 
         $generated = 0;
 
-        foreach ($connections as $connection) {
-            $renewalDate = Carbon::parse($connection->renewal_date);
-
-            // Check karo agar aaj renewal date hai
-            if ($renewalDate->day !== $today->day) {
-                continue;
-            }
-
-            // Check karo is month invoice already bani hai ya nahi
-            $exists = Invoice::where('customer_id', $connection->customer_id)
-                ->where('package_id', $connection->package_id)
+        foreach ($customers as $customer) {
+            // Is month invoice already bani hai?
+            $exists = Invoice::where('customer_id', $customer->id)
                 ->whereMonth('issue_date', $today->month)
                 ->whereYear('issue_date', $today->year)
                 ->exists();
 
-            if ($exists) {
-                continue;
-            }
+            if ($exists) continue;
 
-            // Invoice number generate karo
-            $invoiceNumber = 'INV-' . strtoupper(uniqid());
+            // Package — active connection se lo
+            $connection = $customer->connections->where('status', 'active')->first();
+            $package = $connection ? $connection->package : Package::where('is_active', true)->first();
 
-            $amount = $connection->package->price;
-            $dueDate = $today->copy()->addMonth();
+            if (!$package) continue;
 
             Invoice::create([
-                'invoice_number' => $invoiceNumber,
-                'customer_id'    => $connection->customer_id,
-                'package_id'     => $connection->package_id,
-                'amount'         => $amount,
+                'invoice_number' => 'INV-' . strtoupper(uniqid()),
+                'customer_id'    => $customer->id,
+                'package_id'     => $package->id,
+                'amount'         => $package->price,
                 'discount'       => 0,
                 'tax'            => 0,
-                'total_amount'   => $amount,
+                'total_amount'   => $package->price,
                 'issue_date'     => $today->toDateString(),
-                'due_date'       => $dueDate->toDateString(),
+                'due_date'       => $customer->expiry_date,
                 'status'         => 'unpaid',
                 'notes'          => 'Auto generated monthly invoice',
-            ]);
-
-            // Renewal date next month same date update karo
-            $connection->update([
-                'renewal_date' => $dueDate->toDateString(),
             ]);
 
             $generated++;

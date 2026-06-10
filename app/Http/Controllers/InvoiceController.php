@@ -5,15 +5,28 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\Customer;
 use App\Models\Package;
+use App\Models\Payment;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class InvoiceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $invoices = Invoice::with(['customer', 'package'])
-            ->latest()
-            ->paginate(20);
+        $query = Invoice::with(['customer', 'package', 'payments'])->latest();
+
+        if ($request->filled('expiry_days')) {
+            $days = (int) $request->expiry_days;
+            $today = now()->toDateString();
+            $targetDate = now()->addDays($days)->toDateString();
+
+            $query->whereIn('status', ['unpaid', 'partial'])
+                  ->whereDate('due_date', '>=', $today)
+                  ->whereDate('due_date', '<=', $targetDate);
+        }
+
+        $invoices = $query->paginate(20)->withQueryString();
+
         return view('invoices.index', compact('invoices'));
     }
 
@@ -62,7 +75,7 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
-        $invoice->load('customer', 'package');
+        $invoice->load('customer', 'package', 'payments');
         return view('invoices.show', compact('invoice'));
     }
 
@@ -114,14 +127,71 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.index')->with('success', 'Invoice deleted successfully!');
     }
 
-    // Individual paid
     public function markPaid(Invoice $invoice)
     {
         $invoice->update(['status' => 'paid']);
-        return back()->with('success', 'Invoice marked as paid!');
+
+        Payment::create([
+            'invoice_id'     => $invoice->id,
+            'customer_id'    => $invoice->customer_id,
+            'amount_paid'    => $invoice->total_amount,
+            'payment_date'   => now()->toDateString(),
+            'payment_method' => 'cash',
+            'received_by'    => auth()->id(),
+            'notes'          => 'Full payment received',
+        ]);
+
+        $newDueDate    = Carbon::parse($invoice->due_date);
+        $newExpiryDate = $newDueDate->copy()->addMonth()->toDateString();
+
+        $invoice->customer->update([
+            'due_date'    => $newDueDate->toDateString(),
+            'expiry_date' => $newExpiryDate,
+        ]);
+
+        return back()->with('success', 'Invoice paid! Customer renewed till ' . $newExpiryDate);
     }
 
-    // Bulk paid
+    public function partialPayment(Request $request, Invoice $invoice)
+    {
+        $request->validate([
+            'amount_paid'    => 'required|numeric|min:1|max:' . $invoice->total_amount,
+            'payment_method' => 'required|in:cash,bank_transfer,easypaisa,jazzcash,cheque',
+            'notes'          => 'nullable|string',
+        ]);
+
+        $totalPaid = $invoice->payments()->sum('amount_paid') + $request->amount_paid;
+
+        Payment::create([
+            'invoice_id'     => $invoice->id,
+            'customer_id'    => $invoice->customer_id,
+            'amount_paid'    => $request->amount_paid,
+            'payment_date'   => now()->toDateString(),
+            'payment_method' => $request->payment_method,
+            'received_by'    => auth()->id(),
+            'notes'          => $request->notes,
+        ]);
+
+        if ($totalPaid >= $invoice->total_amount) {
+            $invoice->update(['status' => 'paid']);
+
+            $newDueDate    = Carbon::parse($invoice->due_date);
+            $newExpiryDate = $newDueDate->copy()->addMonth()->toDateString();
+
+            $invoice->customer->update([
+                'due_date'    => $newDueDate->toDateString(),
+                'expiry_date' => $newExpiryDate,
+            ]);
+
+            return back()->with('success', 'Full payment complete! Customer renewed till ' . $newExpiryDate);
+        }
+
+        $invoice->update(['status' => 'partial']);
+        $remaining = $invoice->total_amount - $totalPaid;
+
+        return back()->with('success', 'Partial payment of Rs.' . number_format($request->amount_paid, 0) . ' recorded. Remaining: Rs.' . number_format($remaining, 0));
+    }
+
     public function bulkPaid(Request $request)
     {
         $request->validate([
@@ -129,9 +199,30 @@ class InvoiceController extends Controller
             'invoice_ids.*' => 'exists:invoices,id',
         ]);
 
-        Invoice::whereIn('id', $request->invoice_ids)
-            ->update(['status' => 'paid']);
+        $invoices = Invoice::with('customer')->whereIn('id', $request->invoice_ids)->get();
 
-        return back()->with('success', count($request->invoice_ids) . ' invoices marked as paid!');
+        foreach ($invoices as $invoice) {
+            $invoice->update(['status' => 'paid']);
+
+            Payment::create([
+                'invoice_id'     => $invoice->id,
+                'customer_id'    => $invoice->customer_id,
+                'amount_paid'    => $invoice->total_amount,
+                'payment_date'   => now()->toDateString(),
+                'payment_method' => 'cash',
+                'received_by'    => auth()->id(),
+                'notes'          => 'Bulk payment received',
+            ]);
+
+            $newDueDate    = Carbon::parse($invoice->due_date);
+            $newExpiryDate = $newDueDate->copy()->addMonth()->toDateString();
+
+            $invoice->customer->update([
+                'due_date'    => $newDueDate->toDateString(),
+                'expiry_date' => $newExpiryDate,
+            ]);
+        }
+
+        return back()->with('success', count($request->invoice_ids) . ' invoices paid & customers renewed!');
     }
 }

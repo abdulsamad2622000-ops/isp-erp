@@ -28,7 +28,7 @@
                     </div>
                     <div class="alert alert-info p-2 small mb-0">
                         <strong>Required columns:</strong> name, phone<br>
-                        <strong>Optional:</strong> cnic, whatsapp, email, address, area, status, joining_date<br>
+                        <strong>Optional:</strong> user_id, cnic, whatsapp, email, address, area, status, due_date, expiry_date<br>
                         <strong>Status values:</strong> active / suspended / terminated
                     </div>
                 </div>
@@ -39,6 +39,33 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+{{-- Expiry Filter Bar --}}
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="fw-semibold text-muted small me-1"><i class="bi bi-clock-history me-1"></i>Expiry Filter:</span>
+            <a href="{{ route('customers.index', ['expiry_days' => 3]) }}"
+                class="btn btn-sm {{ $expiryDays == 3 ? 'btn-danger' : 'btn-outline-danger' }}">3 Days</a>
+            <a href="{{ route('customers.index', ['expiry_days' => 4]) }}"
+                class="btn btn-sm {{ $expiryDays == 4 ? 'btn-warning' : 'btn-outline-warning' }}">4 Days</a>
+            <a href="{{ route('customers.index', ['expiry_days' => 5]) }}"
+                class="btn btn-sm {{ $expiryDays == 5 ? 'btn-info' : 'btn-outline-info' }}">5 Days</a>
+            <form method="GET" action="{{ route('customers.index') }}" class="d-flex gap-2 align-items-center ms-2">
+                <input type="number" name="expiry_days" class="form-control form-control-sm"
+                    style="width:90px;" placeholder="Custom" min="1" max="365"
+                    value="{{ !in_array($expiryDays, [3,4,5]) && $expiryDays ? $expiryDays : '' }}">
+                <button type="submit" class="btn btn-sm btn-secondary">Go</button>
+            </form>
+            @if($expiryDays)
+            <a href="{{ route('customers.index') }}" class="btn btn-sm btn-outline-secondary ms-1">
+                <i class="bi bi-x-lg"></i> Clear
+            </a>
+            <span class="badge bg-dark ms-1">Expiring within {{ $expiryDays }} day(s)</span>
+            @endif
         </div>
     </div>
 </div>
@@ -75,21 +102,39 @@
                         <th>Name</th>
                         <th>Phone</th>
                         <th>Area</th>
-                        <th>Joining Date</th>
+                        <th>Due Date</th>
+                        <th>Expiry Date</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($customers as $customer)
-                    <tr>
+                    @php
+                        $daysLeft = $customer->expiry_date
+                            ? (int) now()->diffInDays(\Carbon\Carbon::parse($customer->expiry_date), false)
+                            : null;
+                    @endphp
+                    <tr class="{{ $daysLeft !== null && $daysLeft <= 3 && $daysLeft >= 0 ? 'table-danger' : ($daysLeft !== null && $daysLeft <= 5 && $daysLeft >= 0 ? 'table-warning' : '') }}">
                         <td class="ps-3">{{ $loop->iteration }}</td>
                         <td>{{ $customer->name }}</td>
                         <td>{{ $customer->phone }}</td>
                         <td>{{ $customer->area->area_name ?? 'N/A' }}</td>
-                        <td>{{ \Carbon\Carbon::parse($customer->joining_date)->format('d M Y') }}</td>
+                        <td>{{ $customer->due_date ? \Carbon\Carbon::parse($customer->due_date)->format('d M Y') : '—' }}</td>
                         <td>
-                            <span class="badge bg-{{ $customer->status == 'active' ? 'success' : ($customer->status == 'suspended' ? 'warning' : 'danger') }}">
+                            @if($customer->expiry_date)
+                                {{ \Carbon\Carbon::parse($customer->expiry_date)->format('d M Y') }}
+                                @if($daysLeft !== null)
+                                    <span class="badge bg-{{ $daysLeft < 0 ? 'danger' : ($daysLeft <= 3 ? 'danger' : ($daysLeft <= 5 ? 'warning text-dark' : 'secondary')) }} ms-1">
+                                        {{ $daysLeft < 0 ? 'Expired' : $daysLeft.'d left' }}
+                                    </span>
+                                @endif
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ $customer->status == 'active' ? 'success' : ($customer->status == 'suspended' ? 'warning text-dark' : 'danger') }}">
                                 {{ ucfirst($customer->status) }}
                             </span>
                         </td>
@@ -110,7 +155,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">No customers found</td>
+                        <td colspan="8" class="text-center text-muted py-4">No customers found</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -124,4 +169,5 @@
     </div>
     @endif
 </div>
+
 @endsection

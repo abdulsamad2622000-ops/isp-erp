@@ -23,13 +23,14 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
-    Route::resource('users', UserController::class);
+
     Route::get('/', function () {
         return redirect()->route('dashboard');
     });
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    Route::resource('users', UserController::class);
     Route::resource('areas', AreaController::class);
     Route::resource('packages', PackageController::class);
 
@@ -38,9 +39,13 @@ Route::middleware(['auth'])->group(function () {
     Route::post('customers-import', [CustomerController::class, 'import'])->name('customers.import');
 
     Route::resource('connections', ConnectionController::class);
-Route::resource('invoices', InvoiceController::class);
-Route::post('invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])->name('invoices.markPaid');
-Route::post('invoices/bulk-paid', [InvoiceController::class, 'bulkPaid'])->name('invoices.bulkPaid');    Route::resource('payments', PaymentController::class);
+
+    Route::post('invoices/bulk-paid', [InvoiceController::class, 'bulkPaid'])->name('invoices.bulkPaid');
+    Route::resource('invoices', InvoiceController::class);
+    Route::post('invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])->name('invoices.markPaid');
+    Route::post('invoices/{invoice}/partial-payment', [InvoiceController::class, 'partialPayment'])->name('invoices.partialPayment');
+
+    Route::resource('payments', PaymentController::class);
     Route::resource('complaints', ComplaintController::class);
     Route::resource('inventory', InventoryController::class);
     Route::resource('suspensions', SuspensionController::class);

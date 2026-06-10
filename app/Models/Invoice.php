@@ -34,4 +34,14 @@ class Invoice extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function getTotalPaidAttribute()
+    {
+        return $this->payments()->sum('amount_paid');
+    }
+
+    public function getRemainingAttribute()
+    {
+        return $this->total_amount - $this->total_paid;
+    }
 }

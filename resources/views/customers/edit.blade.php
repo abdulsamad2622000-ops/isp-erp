@@ -21,7 +21,7 @@
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
                     <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
-                        value="{{ old('name', $customer->name) }}">
+                        value="{{ old('name', $customer->name) }}" placeholder="Enter full name">
                     @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-6">
@@ -52,23 +52,24 @@
                         style="position:absolute;z-index:999;width:100%;display:none;max-height:200px;overflow-y:auto;"></ul>
                     @error('area_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Email</label>
-                    <input type="email" name="email" class="form-control @error('email') is-invalid @enderror"
-                        value="{{ old('email', $customer->email) }}" placeholder="Enter email address">
-                    @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
                 <div class="col-md-12">
                     <label class="form-label fw-semibold">Address</label>
-                    <textarea name="address" class="form-control @error('address') is-invalid @enderror"
-                        rows="2" placeholder="Enter full address">{{ old('address', $customer->address) }}</textarea>
-                    @error('address')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <textarea name="address" class="form-control" rows="2"
+                        placeholder="Enter full address">{{ old('address', $customer->address) }}</textarea>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Joining Date <span class="text-danger">*</span></label>
-                    <input type="date" name="joining_date" class="form-control @error('joining_date') is-invalid @enderror"
-                        value="{{ old('joining_date', $customer->joining_date) }}">
-                    @error('joining_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <label class="form-label fw-semibold">Due Date <span class="text-danger">*</span></label>
+                    <input type="date" name="due_date" id="due_date"
+                        class="form-control @error('due_date') is-invalid @enderror"
+                        value="{{ old('due_date', $customer->due_date) }}">
+                    @error('due_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Expiry Date</label>
+                    <input type="date" name="expiry_date" id="expiry_date"
+                        class="form-control"
+                        value="{{ old('expiry_date', $customer->expiry_date) }}">
+                    <div class="form-text">Auto set to 1 month after due date</div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
@@ -135,6 +136,27 @@ input.addEventListener('input', function () {
 document.addEventListener('click', function (e) {
     if (!input.contains(e.target)) {
         suggestions.style.display = 'none';
+    }
+});
+
+// Auto set expiry date = due date + 1 month
+document.getElementById('due_date').addEventListener('change', function() {
+    const due = new Date(this.value);
+    if (!isNaN(due)) {
+        due.setMonth(due.getMonth() + 1);
+        document.getElementById('expiry_date').value = due.toISOString().split('T')[0];
+    }
+});
+
+
+// Set expiry on page load if empty
+window.addEventListener('load', function() {
+    const dueInput = document.getElementById('due_date');
+    const expiryInput = document.getElementById('expiry_date');
+    if (dueInput.value && !expiryInput.value) {
+        const due = new Date(dueInput.value);
+        due.setMonth(due.getMonth() + 1);
+        expiryInput.value = due.toISOString().split('T')[0];
     }
 });
 </script>
