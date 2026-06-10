@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\Area;
+use App\Exports\CustomersExport;
+use App\Imports\CustomersImport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
@@ -25,12 +28,13 @@ class CustomerController extends Controller
         $request->validate([
             'name'         => 'required|string|max:255',
             'phone'        => 'required|string|max:20',
-            'address'      => 'required|string',
+            'address' => 'nullable|string',
             'area_id'      => 'required|exists:areas,id',
             'joining_date' => 'required|date',
             'cnic'         => 'nullable|string|max:15|unique:customers,cnic',
             'email'        => 'nullable|email',
             'status'       => 'required|in:active,suspended,terminated',
+            'user_id' => 'required|string|max:255|unique:customers,user_id',
         ]);
 
         Customer::create($request->all());
@@ -55,12 +59,13 @@ class CustomerController extends Controller
         $request->validate([
             'name'         => 'required|string|max:255',
             'phone'        => 'required|string|max:20',
-            'address'      => 'required|string',
+           'address' => 'nullable|string',
             'area_id'      => 'required|exists:areas,id',
             'joining_date' => 'required|date',
             'cnic'         => 'nullable|string|max:15|unique:customers,cnic,' . $customer->id,
             'email'        => 'nullable|email',
             'status'       => 'required|in:active,suspended,terminated',
+            'user_id' => 'required|string|max:255|unique:customers,user_id,' . $customer->id,
         ]);
 
         $customer->update($request->all());
@@ -72,5 +77,21 @@ class CustomerController extends Controller
     {
         $customer->delete();
         return redirect()->route('customers.index')->with('success', 'Customer deleted successfully!');
+    }
+
+    public function export()
+    {
+        return Excel::download(new CustomersExport, 'customers_' . date('Y-m-d') . '.xlsx');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv|max:2048',
+        ]);
+
+        Excel::import(new CustomersImport, $request->file('file'));
+
+        return redirect()->route('customers.index')->with('success', 'Customers imported successfully!');
     }
 }

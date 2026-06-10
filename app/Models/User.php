@@ -10,48 +10,27 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'role',
-    ];
+    protected $fillable = ['name', 'email', 'password', 'role'];
 
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return ['email_verified_at' => 'datetime', 'password' => 'hashed'];
     }
 
-    public function complaints()
+    public function permissions()
     {
-        return $this->hasMany(Complaint::class, 'assigned_to');
+        return $this->hasMany(Permission::class);
     }
 
-    public function connections()
+    public function hasPermission($module, $action = 'can_view')
     {
-        return $this->hasMany(Connection::class, 'technician_id');
-    }
+        if ($this->role === 'admin') return true;
 
-    public function payments()
-    {
-        return $this->hasMany(Payment::class, 'received_by');
-    }
-
-    public function expenses()
-    {
-        return $this->hasMany(Expense::class, 'added_by');
-    }
-
-    public function suspensions()
-    {
-        return $this->hasMany(Suspension::class, 'actioned_by');
+        return $this->permissions()
+            ->where('module', $module)
+            ->where($action, true)
+            ->exists();
     }
 }

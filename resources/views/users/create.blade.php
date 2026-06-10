@@ -1,61 +1,118 @@
- 
 @extends('layouts.app')
 
 @section('title', 'Add User')
 
 @section('content')
 <div class="card">
-    <div class="card-header">
-        <i class="bi bi-person-plus me-2"></i>Add New User
-    </div>
+    <div class="card-header"><i class="bi bi-person-plus me-2"></i>Add New User</div>
     <div class="card-body">
         <form action="{{ route('users.store') }}" method="POST">
             @csrf
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
                     <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
-                        value="{{ old('name') }}" placeholder="Enter full name">
+                        value="{{ old('name') }}">
                     @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
                     <input type="email" name="email" class="form-control @error('email') is-invalid @enderror"
-                        value="{{ old('email') }}" placeholder="Enter email address">
+                        value="{{ old('email') }}">
                     @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
-                    <input type="password" name="password" class="form-control @error('password') is-invalid @enderror"
-                        placeholder="Minimum 6 characters">
-                    @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="input-group">
+                        <input type="password" name="password" id="password" class="form-control">
+                        <button type="button" class="btn btn-outline-secondary" onclick="togglePass()">
+                            <i class="bi bi-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Confirm Password <span class="text-danger">*</span></label>
-                    <input type="password" name="password_confirmation" class="form-control"
-                        placeholder="Repeat password">
+            </div>
+
+            <!-- Permissions Table -->
+            <div class="card">
+                <div class="card-header fw-bold">
+                    <i class="bi bi-shield-check me-2"></i>Module Permissions
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Role <span class="text-danger">*</span></label>
-                    <select name="role" class="form-select @error('role') is-invalid @enderror">
-                        <option value="">-- Select Role --</option>
-                        <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin</option>
-                        <option value="billing" {{ old('role') == 'billing' ? 'selected' : '' }}>Billing Staff</option>
-                        <option value="technician" {{ old('role') == 'technician' ? 'selected' : '' }}>Technician</option>
-                        <option value="support" {{ old('role') == 'support' ? 'selected' : '' }}>Support Staff</option>
-                    </select>
-                    @error('role')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="ps-3">Module</th>
+                                    <th class="text-center">
+                                        <input type="checkbox" onchange="toggleAll('can_view', this.checked)">
+                                        View
+                                    </th>
+                                    <th class="text-center">
+                                        <input type="checkbox" onchange="toggleAll('can_add', this.checked)">
+                                        Add
+                                    </th>
+                                    <th class="text-center">
+                                        <input type="checkbox" onchange="toggleAll('can_edit', this.checked)">
+                                        Edit
+                                    </th>
+                                    <th class="text-center">
+                                        <input type="checkbox" onchange="toggleAll('can_delete', this.checked)">
+                                        Delete
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($modules as $module)
+                                <tr>
+                                    <td class="ps-3 fw-semibold">{{ ucfirst($module) }}</td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="permissions[{{ $module }}][can_view]"
+                                            class="form-check-input can_view"
+                                            {{ old("permissions.{$module}.can_view") ? 'checked' : '' }}>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="permissions[{{ $module }}][can_add]"
+                                            class="form-check-input can_add"
+                                            {{ old("permissions.{$module}.can_add") ? 'checked' : '' }}>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="permissions[{{ $module }}][can_edit]"
+                                            class="form-check-input can_edit"
+                                            {{ old("permissions.{$module}.can_edit") ? 'checked' : '' }}>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="permissions[{{ $module }}][can_delete]"
+                                            class="form-check-input can_delete"
+                                            {{ old("permissions.{$module}.can_delete") ? 'checked' : '' }}>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-lg"></i> Create User
-                    </button>
-                    <a href="{{ route('users.index') }}" class="btn btn-secondary ms-2">
-                        <i class="bi bi-x-lg"></i> Cancel
-                    </a>
-                </div>
+            </div>
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save User</button>
+                <a href="{{ route('users.index') }}" class="btn btn-secondary ms-2">Cancel</a>
             </div>
         </form>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+function togglePass() {
+    const input = document.getElementById('password');
+    const icon  = document.getElementById('eyeIcon');
+    input.type  = input.type === 'password' ? 'text' : 'password';
+    icon.className = input.type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
+}
+
+function toggleAll(cls, checked) {
+    document.querySelectorAll('.' + cls).forEach(el => el.checked = checked);
+}
+</script>
 @endsection

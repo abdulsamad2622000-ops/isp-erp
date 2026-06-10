@@ -1,4 +1,3 @@
- 
 @extends('layouts.app')
 
 @section('title', 'Add Customer')
@@ -12,6 +11,12 @@
         <form action="{{ route('customers.store') }}" method="POST">
             @csrf
             <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">User ID <span class="text-danger">*</span></label>
+                    <input type="text" name="user_id" class="form-control @error('user_id') is-invalid @enderror"
+                        value="{{ old('user_id') }}" placeholder="Enter User ID">
+                    @error('user_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
                     <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
@@ -35,23 +40,16 @@
                     <input type="text" name="whatsapp" class="form-control"
                         value="{{ old('whatsapp') }}" placeholder="e.g. 0300-1234567">
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Email</label>
-                    <input type="email" name="email" class="form-control @error('email') is-invalid @enderror"
-                        value="{{ old('email') }}" placeholder="Enter email address">
-                    @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-                <div class="col-md-6">
+                <div class="col-md-6" style="position:relative;">
                     <label class="form-label fw-semibold">Area <span class="text-danger">*</span></label>
-                    <select name="area_id" class="form-select @error('area_id') is-invalid @enderror">
-                        <option value="">-- Select Area --</option>
-                        @foreach($areas as $area)
-                            <option value="{{ $area->id }}" {{ old('area_id') == $area->id ? 'selected' : '' }}>
-                                {{ $area->area_name }} - {{ $area->city }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('area_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <input type="text" id="area_input" name="area_name"
+                        class="form-control @error('area_id') is-invalid @enderror"
+                        value="{{ old('area_name') }}"
+                        placeholder="Type area name..." autocomplete="off">
+                    <input type="hidden" name="area_id" id="area_id" value="{{ old('area_id') }}">
+                    <ul id="area_suggestions" class="list-group shadow"
+                        style="position:absolute;z-index:999;width:100%;display:none;max-height:200px;overflow-y:auto;"></ul>
+                    @error('area_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-12">
                     <label class="form-label fw-semibold">Address <span class="text-danger">*</span></label>
@@ -86,4 +84,51 @@
         </form>
     </div>
 </div>
+
+<script>
+const areas = @json($areas->map(fn($a) => ['id' => $a->id, 'name' => $a->area_name]));
+
+const input = document.getElementById('area_input');
+const hiddenInput = document.getElementById('area_id');
+const suggestions = document.getElementById('area_suggestions');
+
+input.addEventListener('input', function () {
+    const query = this.value.toLowerCase().trim();
+    suggestions.innerHTML = '';
+    hiddenInput.value = '';
+
+    if (query.length === 0) {
+        suggestions.style.display = 'none';
+        return;
+    }
+
+    const filtered = areas.filter(a => a.name.toLowerCase().includes(query));
+
+    if (filtered.length === 0) {
+        suggestions.style.display = 'none';
+        return;
+    }
+
+    filtered.forEach(area => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item list-group-item-action';
+        li.style.cursor = 'pointer';
+        li.textContent = area.name;
+        li.addEventListener('click', function () {
+            input.value = area.name;
+            hiddenInput.value = area.id;
+            suggestions.style.display = 'none';
+        });
+        suggestions.appendChild(li);
+    });
+
+    suggestions.style.display = 'block';
+});
+
+document.addEventListener('click', function (e) {
+    if (!input.contains(e.target)) {
+        suggestions.style.display = 'none';
+    }
+});
+</script>
 @endsection

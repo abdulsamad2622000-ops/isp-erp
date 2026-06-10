@@ -11,29 +11,31 @@ class InvoiceController extends Controller
 {
     public function index()
     {
-        $invoices = Invoice::with('customer', 'package')->latest()->paginate(15);
+        $invoices = Invoice::with(['customer', 'package'])
+            ->latest()
+            ->paginate(20);
         return view('invoices.index', compact('invoices'));
     }
 
     public function create()
     {
         $customers = Customer::where('status', 'active')->get();
-        $packages  = Package::where('is_active', true)->get();
+        $packages = Package::where('is_active', true)->get();
         return view('invoices.create', compact('customers', 'packages'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'customer_id'    => 'required|exists:customers,id',
-            'package_id'     => 'required|exists:packages,id',
-            'amount'         => 'required|numeric|min:0',
-            'discount'       => 'nullable|numeric|min:0',
-            'tax'            => 'nullable|numeric|min:0',
-            'issue_date'     => 'required|date',
-            'due_date'       => 'required|date',
-            'status'         => 'required|in:unpaid,paid,partial,overdue',
-            'notes'          => 'nullable|string',
+            'customer_id' => 'required|exists:customers,id',
+            'package_id'  => 'required|exists:packages,id',
+            'amount'      => 'required|numeric|min:0',
+            'discount'    => 'nullable|numeric|min:0',
+            'tax'         => 'nullable|numeric|min:0',
+            'issue_date'  => 'required|date',
+            'due_date'    => 'required|date',
+            'status'      => 'required|in:unpaid,paid,partial,overdue',
+            'notes'       => 'nullable|string',
         ]);
 
         $amount       = $request->amount;
@@ -41,10 +43,8 @@ class InvoiceController extends Controller
         $tax          = $request->tax ?? 0;
         $total_amount = $amount - $discount + $tax;
 
-        $invoice_number = 'INV-' . date('Ymd') . '-' . str_pad(Invoice::count() + 1, 4, '0', STR_PAD_LEFT);
-
         Invoice::create([
-            'invoice_number' => $invoice_number,
+            'invoice_number' => 'INV-' . strtoupper(uniqid()),
             'customer_id'    => $request->customer_id,
             'package_id'     => $request->package_id,
             'amount'         => $amount,
@@ -62,29 +62,29 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
-        $invoice->load('customer', 'package', 'payments');
+        $invoice->load('customer', 'package');
         return view('invoices.show', compact('invoice'));
     }
 
     public function edit(Invoice $invoice)
     {
         $customers = Customer::where('status', 'active')->get();
-        $packages  = Package::where('is_active', true)->get();
+        $packages = Package::where('is_active', true)->get();
         return view('invoices.edit', compact('invoice', 'customers', 'packages'));
     }
 
     public function update(Request $request, Invoice $invoice)
     {
         $request->validate([
-            'customer_id'    => 'required|exists:customers,id',
-            'package_id'     => 'required|exists:packages,id',
-            'amount'         => 'required|numeric|min:0',
-            'discount'       => 'nullable|numeric|min:0',
-            'tax'            => 'nullable|numeric|min:0',
-            'issue_date'     => 'required|date',
-            'due_date'       => 'required|date',
-            'status'         => 'required|in:unpaid,paid,partial,overdue',
-            'notes'          => 'nullable|string',
+            'customer_id' => 'required|exists:customers,id',
+            'package_id'  => 'required|exists:packages,id',
+            'amount'      => 'required|numeric|min:0',
+            'discount'    => 'nullable|numeric|min:0',
+            'tax'         => 'nullable|numeric|min:0',
+            'issue_date'  => 'required|date',
+            'due_date'    => 'required|date',
+            'status'      => 'required|in:unpaid,paid,partial,overdue',
+            'notes'       => 'nullable|string',
         ]);
 
         $amount       = $request->amount;
@@ -112,5 +112,26 @@ class InvoiceController extends Controller
     {
         $invoice->delete();
         return redirect()->route('invoices.index')->with('success', 'Invoice deleted successfully!');
+    }
+
+    // Individual paid
+    public function markPaid(Invoice $invoice)
+    {
+        $invoice->update(['status' => 'paid']);
+        return back()->with('success', 'Invoice marked as paid!');
+    }
+
+    // Bulk paid
+    public function bulkPaid(Request $request)
+    {
+        $request->validate([
+            'invoice_ids'   => 'required|array',
+            'invoice_ids.*' => 'exists:invoices,id',
+        ]);
+
+        Invoice::whereIn('id', $request->invoice_ids)
+            ->update(['status' => 'paid']);
+
+        return back()->with('success', count($request->invoice_ids) . ' invoices marked as paid!');
     }
 }

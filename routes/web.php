@@ -22,7 +22,6 @@ Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Protected Routes
-
 Route::middleware(['auth'])->group(function () {
     Route::resource('users', UserController::class);
     Route::get('/', function () {
@@ -33,10 +32,15 @@ Route::middleware(['auth'])->group(function () {
 
     Route::resource('areas', AreaController::class);
     Route::resource('packages', PackageController::class);
+
     Route::resource('customers', CustomerController::class);
+    Route::get('customers-export', [CustomerController::class, 'export'])->name('customers.export');
+    Route::post('customers-import', [CustomerController::class, 'import'])->name('customers.import');
+
     Route::resource('connections', ConnectionController::class);
-    Route::resource('invoices', InvoiceController::class);
-    Route::resource('payments', PaymentController::class);
+Route::resource('invoices', InvoiceController::class);
+Route::post('invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])->name('invoices.markPaid');
+Route::post('invoices/bulk-paid', [InvoiceController::class, 'bulkPaid'])->name('invoices.bulkPaid');    Route::resource('payments', PaymentController::class);
     Route::resource('complaints', ComplaintController::class);
     Route::resource('inventory', InventoryController::class);
     Route::resource('suspensions', SuspensionController::class);
