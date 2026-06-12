@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Imports;
 
 use App\Models\Area;
@@ -13,7 +12,6 @@ class CustomersImport
     public function import($file)
     {
         $extension = strtolower($file->getClientOriginalExtension());
-
         if ($extension === 'csv') {
             $reader = new CSVReader();
         } else {
@@ -21,7 +19,6 @@ class CustomersImport
         }
 
         $reader->open($file->getPathname());
-
         $isFirstRow = true;
         $headers = [];
 
@@ -29,7 +26,6 @@ class CustomersImport
             foreach ($sheet->getRowIterator() as $row) {
                 $rowData = $row->toArray();
 
-                // First row = headers — normalize karo
                 if ($isFirstRow) {
                     $headers = array_map(function($h) {
                         return strtolower(trim(str_replace([' ', '-'], '_', $h)));
@@ -38,33 +34,24 @@ class CustomersImport
                     continue;
                 }
 
-                // Skip empty rows
                 if (empty(array_filter($rowData))) continue;
 
-                // Map headers to values
                 $data = [];
                 foreach ($headers as $i => $header) {
                     $data[$header] = $rowData[$i] ?? null;
                 }
 
-                // Skip if name or phone missing
                 if (empty($data['name']) || empty($data['phone'])) continue;
-
-                // Skip duplicate phone
                 if (Customer::where('phone', $data['phone'])->exists()) continue;
 
-                // Area match — both 'area' key possible
                 $areaName = $data['area'] ?? null;
                 $area = $areaName ? Area::where('area_name', $areaName)->first() : null;
 
-                // Due date & expiry date
-                $dueDate    = !empty($data['due_date']) ? $data['due_date'] : now()->toDateString();
-                $expiryDate = !empty($data['expiry_date']) ? $data['expiry_date'] : Carbon::parse($dueDate)->addMonth()->toDateString();
+                // Due date & expiry date — safe parsing
+                $dueDate    = $this->parseDate($data['due_date'] ?? null) ?? now()->toDateString();
+                $expiryDate = $this->parseDate($data['expiry_date'] ?? null) ?? Carbon::parse($dueDate)->addMonth()->toDateString();
 
-                // user_id — could be 'user_id' or '#' column (skip # column)
                 $userId = $data['user_id'] ?? null;
-
-                // Skip duplicate user_id
                 if ($userId && Customer::where('user_id', $userId)->exists()) continue;
 
                 Customer::create([
@@ -85,5 +72,50 @@ class CustomersImport
         }
 
         $reader->close();
+    }
+
+    /**
+     * Excel se aaye kisi bhi date format ko Y-m-d mein convert karo
+     */
+    private function parseDate($value)
+    {
+        if (empty($value)) return null;
+
+        // Already a DateTime object (OpenSpout sometimes returns this)
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        $value = trim((string) $value);
+        if ($value === '') return null;
+
+        // Try common formats
+        $formats = [
+            'Y-m-d',
+            'd M Y H:i:s',
+            'd M Y',
+            'd/m/Y',
+            'm/d/Y',
+            'd-m-Y',
+            'Y-m-d H:i:s',
+        ];
+
+        foreach ($formats as $format) {
+            try {
+                $date = Carbon::createFromFormat($format, $value);
+                if ($date !== false) {
+                    return $date->format('Y-m-d');
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        // Last resort — Carbon ka generic parser
+        try {
+            return Carbon::parse($value)->format('Y-m-d');
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 }
